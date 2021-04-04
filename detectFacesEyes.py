@@ -7,7 +7,7 @@ faceCascade = cv2.CascadeClassifier('./haarcascade/haarcascade_frontalface_defau
 eyeCascade = cv2.CascadeClassifier('./haarcascade/haarcascade_eye_tree_eyeglasses.xml')
 
 video_capture = cv2.VideoCapture(0)
-video_capture = cv2.VideoCapture(config.camera_url)
+#video_capture = cv2.VideoCapture(config.camera_url)
 
 cv2.namedWindow("Window", cv2.WINDOW_NORMAL)
 cv2.resizeWindow('Window', 400, 400)
@@ -20,16 +20,17 @@ while True:
 
     # print("[INFO] Found {0} Faces!".format(len(faces)))
     for (x, y, w, h) in faces:
-        cv2.rectangle(img, (x, y), (x+w, y+h), (255,0, 0), 2)
+        #cv2.rectangle(img, (x, y), (x+w, y+h), (255,0, 0), 2)
         roi_gray = gray[y:y+h, x:x+w]
         roi_color = img[y:y+h, x:x+w]
 
         eyes = eyeCascade.detectMultiScale(roi_gray)
 
-        for (ex, ey, ew, eh) in eyes:
-            cv2.rectangle(roi_color,(ex,ey),(ex+ew,ey+eh),(0,255,0), 2)
+        #for (ex, ey, ew, eh) in eyes:
+            #cv2.rectangle(roi_color,(ex,ey),(ex+ew,ey+eh),(0,255,0), 2)
 
         if len(eyes) != 0:
+            #print("EYES", eyes)
             crop_img = img[y-99:y+h+99, x-36:x+w+36]
             if len(crop_img) != 0:
                 letters = string.ascii_lowercase
