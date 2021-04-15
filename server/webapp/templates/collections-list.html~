@@ -1,0 +1,16 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>List AWS Colelctions</h1>
+<div>
+  <a href="collection-new">New</a>
+  <p>Total: {{ collections.length }}</p>
+  <ul>
+    {% for item in collections %}
+    <li>{{ item }}</li>
+    {%- endfor -%}
+  </ul>
+  
+</div>
+{% endblock content %}
+    
+    

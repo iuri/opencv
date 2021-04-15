@@ -1,0 +1,232 @@
+from flask import render_template, jsonify, abort, request, flash, redirect, Blueprint
+import os, requests, json
+from werkzeug.utils import secure_filename
+
+import time
+
+
+# Boto3 libraries to support AWS Rekognition
+import boto3
+from botocore.exceptions import ClientError
+from os import environ
+
+
+main = Blueprint('main', __name__)
+
+@main.route("/")
+@main.route("/home")
+def home():
+    return render_template('index.html')
+
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
+
+
+os.environ['AWS_PROFILE'] = "VideoRekognition"
+os.environ['AWS_DEFAULT_REGION'] ="us-east-1"
+ 
+FEATURES_BLACKLIST = ("Landmarks", "Emotions", "Pose", "Quality", "BoundingBox", "Confidence")
+
+def detect_labels(bucket, filename, attributes=['ALL'], region="us-east-1"):
+  rekognition = boto3.client("rekognition", region)
+
+  response = rekognition.detect_labels(
+    Image={
+      "S3Object": {
+        "Bucket": bucket,
+        "Name": filename,
+      }
+    },
+    MaxLabels=123,
+    MinConfidence=55
+  )
+
+  x = response['Labels']
+  for i in range(len(x)):
+    y = x[i]
+    print(y['Name'])
+    if (y['Name'] == 'Face'):
+      return detect_faces(bucket, filename)
+
+  return response['Labels']
+
+
+def detect_faces(bucket, filename, attributes=['ALL'], region="us-east-1"):
+  rekognition = boto3.client("rekognition", region)
+  
+  response = rekognition.detect_faces(
+    Image={
+      "S3Object": {
+        "Bucket": bucket,
+        "Name": filename,
+      }
+    },
+    Attributes=attributes,
+  )
+
+  return response['FaceDetails']
+
+
+
+# https://realpython.com/python-requests/
+def upload_face(json_text):
+    #  print("HEADERS ", request.headers)
+    #  print("HEADERS AUTH ", request.headers['Authorization'] )
+    headers = {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': request.headers['Authorization'],
+        'Timestamp': request.headers['Timestamp']
+    }
+
+    print("Sending JSON ...")
+    if request.headers['Authorization']:
+        payload = {'data': json.dumps({'data': json_text})}
+        response = requests.post("https://dashboard.qonteo.com/REST/import-face-aws", data=payload, headers=headers)
+        print(response.status_code)
+        print("RESPNOSE FROM ZILL ", response.text)
+    
+        if response.status_code == 200:
+            if response.text == 'ok':
+                return 1
+    return 0
+    
+    
+
+
+#https://roytuts.com/python-flask-rest-api-file-upload/
+@main.route('/upload-file', methods=['GET', 'POST'])
+def upload_file():
+    if request.method == 'POST':
+        # check if the post request has the file part
+        if 'file' not in request.files:
+            flash('No file part')
+            return redirect(request.url)
+        file = request.files['file']
+        # if user does not select file, browser also
+        # submit an empty part without filename
+        if file.filename == '':
+            flash('No selected file')
+            return redirect(request.url)
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            #Get current dir: print(os.path.abspath(os.getcwd()))
+            file.save(os.path.join('/home/ec2-user/qonteo/webapp/uploads/images/', filename))
+            #return redirect(url_for('uploaded_file', filename=filename))
+            json_text = detect_labels('qonteoimages', filename)
+            if upload_face(json_text):
+                return "ok"
+            else:
+                return "nok"
+    return '''
+    <!doctype html>
+    <html xmlns="http://www.w3.org/1999/xhtml">
+      <head>
+        <title>Upload new File</title>
+      </head>
+      <body>
+        <h1>Upload new File</h1>
+        <form method=post enctype=multipart/form-data>
+          <input type=file name=file>
+          <input type=submit value=Upload>
+        </form>
+      </body>
+    </html>
+    '''
+
+
+
+
+def delete_collection(collection_id, region="us-east-1"):
+    print('Attempting to delete collection ' + collection_id)
+    client=boto3.client('rekognition', region)
+    status_code=0
+    try:
+        response=client.delete_collection(CollectionId=collection_id)
+        status_code=response['StatusCode']
+        
+    except ClientError as e:
+        if e.response['Error']['Code'] == 'ResourceNotFoundException':
+            print ('The collection ' + collection_id + ' was not found ')
+        else:
+            print ('Error other than Not Found occurred: ' + e.response['Error']['Message'])
+        status_code=e.response['ResponseMetadata']['HTTPStatusCode']
+    return(status_code)
+
+
+def create_collection(collection_id, attributes=['ALL'], region="us-east-1"):
+    rekognition = boto3.client("rekognition", region)
+
+    #Create a collection
+    print('Creating collection:' + collection_id)
+    response=rekognition.create_collection(
+        CollectionId=collection_id,
+        Tags={
+            'company': 'Qonteo',
+            'project': 'Samsung'
+        }
+    )
+    print('Collection ARN: ' + response['CollectionArn'])
+    print('Status code: ' + str(response['StatusCode']))
+    print('Done...')
+    return 1
+
+
+
+
+@main.route('/collection-new', methods=['GET', 'POST'])
+def collection_new():
+    if request.method == 'POST':
+        print("TITLE", request.form['title'])
+        # check if the post request has the file part
+        if request.form['title'] == '':
+            flash('Title can not be empty!')
+            return redirect(request.url)
+        else:
+            # Creare new colection
+            print("Create Collection")
+            if create_collection(request.form['title']):
+                return redirect('http://aws.qonteo.com/collections-list')
+            
+    return '''
+    <!doctype html>
+    <html xmlns="http://www.w3.org/1999/xhtml">
+      <head>
+        <title>Create AWS Colelction</title>
+      </head>
+      <body>
+        <h1>Create a new Collection</h1>
+        <form method=post>
+          <input type=text id=title name=title>
+          <input type=submit value=Submit>
+        </form>
+      </body>
+    </html>
+    '''
+
+
+
+
+@main.route("/collections-list")
+def collections_list(attributes=['ALL'], region="us-east-1"):
+    # https://docs.aws.amazon.com/pt_br/rekognition/latest/dg/list-collection-procedure.html
+    max_results=2
+    rekognition = boto3.client("rekognition", region)
+    
+    response = rekognition.list_collections(MaxResults=max_results)
+    collections = []
+    done = False
+    while done==False:
+        collections=response['CollectionIds']
+        for collection in collections:            
+            print(collection)
+            collections.append(collection)
+        if 'NextToken' in response:
+            nextToken=response['NextToken']
+            response=rekognition.list_collections(NextToken=nextToken,MaxResults=max_results)
+        else:
+            done = True
+
+    
+    print("Total: ", collection_count)
+    return render_template('collections-list.html', collections=collections)
