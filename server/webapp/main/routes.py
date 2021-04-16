@@ -1,4 +1,4 @@
-from flask import render_template, jsonify, abort, request, flash, redirect, Blueprint
+from flask import render_template, jsonify, abort, request, url_for, flash, redirect, Blueprint
 import os, requests, json
 from werkzeug.utils import secure_filename
 
@@ -12,6 +12,7 @@ from os import environ
 
 
 main = Blueprint('main', __name__)
+
 
 @main.route("/")
 @main.route("/home")
@@ -27,6 +28,12 @@ os.environ['AWS_PROFILE'] = "VideoRekognition"
 os.environ['AWS_DEFAULT_REGION'] ="us-east-1"
  
 FEATURES_BLACKLIST = ("Landmarks", "Emotions", "Pose", "Quality", "BoundingBox", "Confidence")
+
+
+
+####
+### AWS Rekognition
+####
 
 def detect_labels(bucket, filename, attributes=['ALL'], region="us-east-1"):
   rekognition = boto3.client("rekognition", region)
@@ -47,15 +54,48 @@ def detect_labels(bucket, filename, attributes=['ALL'], region="us-east-1"):
     y = x[i]
     print(y['Name'])
     if (y['Name'] == 'Face'):
-      return detect_faces(bucket, filename)
+        match = match_faces(filename, bucket)
+        print("MATCHING RESULTS ", match)
+        if match != '':
+            if match['Similarity'] > 99 and match['Face']['Confidence'] > 99:
+                print("Face already exists")
+                return ''
+        else:
+            return detect_faces(bucket, filename)
+  #return response['Labels']
+  return ''
 
-  return response['Labels']
 
 
-def detect_faces(bucket, filename, attributes=['ALL'], region="us-east-1"):
-  rekognition = boto3.client("rekognition", region)
+def match_faces(filename, bucket="qonteoimages", collectionId="SamsungRekCollection", region="us-east-1"):
+    rek_client = boto3.client("rekognition", region)
+    print("FILENAME", filename)
+    #match_response = rek_client.search_faces_by_image(CollectionId=collectionId,Image={'Bytes': image.read()}, MaxFaces=1,FaceMatchThreshold=85)
+    match_response = rek_client.search_faces_by_image(
+        CollectionId=collectionId,
+        Image={"S3Object": {
+            "Bucket": bucket,
+            "Name": filename
+            }               
+        },
+        MaxFaces=1,
+        FaceMatchThreshold=90)
+    
+    if match_response['FaceMatches']:
+        print('Hello, ',match_response['FaceMatches'][0]['Face']['ExternalImageId'])
+        print('Similarity: ',match_response['FaceMatches'][0]['Similarity'])
+        print('Confidence: ',match_response['FaceMatches'][0]['Face']['Confidence'])
+        return match_response['FaceMatches'][0]
+    else:
+        print('No faces matched')
+        return ''
+        
+        
+    
+def detect_faces(bucket, filename, collection_id="SamsungRekCollection", attributes=['ALL'], region="us-east-1"):
+  rek_client = boto3.client("rekognition", region)
   
-  response = rekognition.detect_faces(
+  response = rek_client.detect_faces(
     Image={
       "S3Object": {
         "Bucket": bucket,
@@ -64,78 +104,84 @@ def detect_faces(bucket, filename, attributes=['ALL'], region="us-east-1"):
     },
     Attributes=attributes,
   )
-
-  return response['FaceDetails']
-
+  print("FACE DETAILS", response)
 
 
-# https://realpython.com/python-requests/
-def upload_face(json_text):
-    #  print("HEADERS ", request.headers)
-    #  print("HEADERS AUTH ", request.headers['Authorization'] )
-    headers = {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': request.headers['Authorization'],
-        'Timestamp': request.headers['Timestamp']
-    }
-
-    print("Sending JSON ...")
-    if request.headers['Authorization']:
-        payload = {'data': json.dumps({'data': json_text})}
-        response = requests.post("https://dashboard.qonteo.com/REST/import-face-aws", data=payload, headers=headers)
-        print(response.status_code)
-        print("RESPNOSE FROM ZILL ", response.text)
-    
-        if response.status_code == 200:
-            if response.text == 'ok':
-                return 1
-    return 0
-    
-    
+  index_response=rek_client.index_faces(
+      CollectionId=collection_id,
+      Image={'S3Object':{
+          'Bucket':bucket,
+          'Name':filename}
+      },
+      ExternalImageId=filename,
+      MaxFaces=1,
+      QualityFilter="AUTO",
+      DetectionAttributes=['ALL'])
+  print("INDEX", index_response)
+  
+  # TODO: error to combine JSONS
+  result = json.loads(response['FaceDetails'])
+  result.update(index_response)
+  # return response['FaceDetails']
+  return result
 
 
-#https://roytuts.com/python-flask-rest-api-file-upload/
-@main.route('/upload-file', methods=['GET', 'POST'])
-def upload_file():
+@main.route('/index-faces', methods=['POST'])
+def index_faces(bucket="qonteoimages", region="us-east-1"):
+    print("Running index_faces ...")
     if request.method == 'POST':
-        # check if the post request has the file part
-        if 'file' not in request.files:
-            flash('No file part')
-            return redirect(request.url)
-        file = request.files['file']
-        # if user does not select file, browser also
-        # submit an empty part without filename
-        if file.filename == '':
-            flash('No selected file')
-            return redirect(request.url)
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            #Get current dir: print(os.path.abspath(os.getcwd()))
-            file.save(os.path.join('/home/ec2-user/qonteo/webapp/uploads/images/', filename))
-            #return redirect(url_for('uploaded_file', filename=filename))
-            json_text = detect_labels('qonteoimages', filename)
-            if upload_face(json_text):
-                return "ok"
-            else:
-                return "nok"
-    return '''
-    <!doctype html>
-    <html xmlns="http://www.w3.org/1999/xhtml">
-      <head>
-        <title>Upload new File</title>
-      </head>
-      <body>
-        <h1>Upload new File</h1>
-        <form method=post enctype=multipart/form-data>
-          <input type=file name=file>
-          <input type=submit value=Upload>
-        </form>
-      </body>
-    </html>
-    '''
+        rek_client = boto3.client("rekognition", region)
+        s3_client = boto3.client("s3", region)
+        
+        response = rek_client.list_collections(MaxResults=10)
+
+        print("CollectionID", request.form['collection_id'])
+        print("LIST ", response['CollectionIds'])
+
+        if request.form['collection_id'] in response['CollectionIds']:
+
+            all_objects = s3_client.list_objects(Bucket=bucket)
+            print("ALL OBJECTS", all_objects)
+            for content in all_objects['Contents']:
+                print("CONTENT ", content)
+                collection_name = content['Key']
+                collection_image = content['Key']
+                if collection_image:
+                    label = collection_name
+                    print('indexing: ',label)
+                    image = content['Key']    
+                    index_response=rek_client.index_faces(CollectionId=request.form['collection_id'],
+                                                          Image={'S3Object':{'Bucket':bucket,'Name':image}},
+                                                          ExternalImageId=label,
+                                                          MaxFaces=1,
+                                                          QualityFilter="AUTO",
+                    DetectionAttributes=['ALL'])
+                    
+                    print('FaceId: ',index_response['FaceRecords'][0]['Face']['FaceId'])
+                    
+                    return redirect('http://aws.qonteo.com/collections-list?msg=success');
+                
+    return redirect('http://aws.qonteo.com/collections-list?msg=failed');
+
+                
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+####
+### Collections
+####
 
 def collection_delete2(collection_id, region="us-east-1"):
     print('Attempting to delete collection ' + collection_id)
@@ -232,10 +278,8 @@ def collections_list(attributes=['ALL'], region="us-east-1"):
     rekognition = boto3.client("rekognition", region)
     
     response = rekognition.list_collections(MaxResults=max_results)
-    collections = []
-    done = False
     collections=response['CollectionIds']
-        
+  #  done = False        
   #  while done==True:
   #      for collection in collections:            
   #          collections.append(collection)
@@ -246,4 +290,83 @@ def collections_list(attributes=['ALL'], region="us-east-1"):
   #          done = True
 
     
-    return render_template('collections-list.html', collections=collections, total=len(collections))
+    return render_template('collections-list.html', collections=collections, total=len(collections), msg='')
+
+
+
+
+
+
+
+
+
+####
+### Upload File
+####
+                
+# https://realpython.com/python-requests/
+def upload_face(json_text):
+    #  print("HEADERS ", request.headers)
+    #  print("HEADERS AUTH ", request.headers['Authorization'] )
+    headers = {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': request.headers['Authorization'],
+        'Timestamp': request.headers['Timestamp']
+    }
+
+    print("Sending JSON ...")
+    if request.headers['Authorization']:
+        payload = {'data': json.dumps({'data': json_text})}
+        response = requests.post("https://dashboard.qonteo.com/REST/import-face-aws", data=payload, headers=headers)
+        print(response.status_code)
+        print("RESPNOSE FROM ZILL ", response.text)
+    
+        if response.status_code == 200:
+            if response.text == 'ok':
+                return 1
+    return 0
+    
+    
+
+
+#https://roytuts.com/python-flask-rest-api-file-upload/
+@main.route('/upload-file', methods=['GET', 'POST'])
+def upload_file():
+    if request.method == 'POST':
+        # check if the post request has the file part
+        if 'file' not in request.files:
+            flash('No file part')
+            return redirect(request.url)
+        file = request.files['file']
+        # if user does not select file, browser also
+        # submit an empty part without filename
+        if file.filename == '':
+            flash('No selected file')
+            return redirect(request.url)
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            #Get current dir: print(os.path.abspath(os.getcwd()))
+            file.save(os.path.join('/home/ec2-user/qonteo/webapp/uploads/images/', filename))
+            #return redirect(url_for('uploaded_file', filename=filename))
+            json_text = detect_labels('qonteoimages', filename)
+            if json_text != '':
+                if upload_face(json_text):
+                    return "ok"
+            return "nok"
+    return '''
+    <!doctype html>
+    <html xmlns="http://www.w3.org/1999/xhtml">
+      <head>
+        <title>Upload new File</title>
+      </head>
+      <body>
+        <h1>Upload new File</h1>
+        <form method=post enctype=multipart/form-data>
+          <input type=file name=file>
+          <input type=submit value=Upload>
+        </form>
+      </body>
+    </html>
+    '''
+
+
