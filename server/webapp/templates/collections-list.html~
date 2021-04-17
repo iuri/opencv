@@ -2,14 +2,41 @@
 {% block content %}
 <h1>List AWS Colelctions</h1>
 <div>
-  <a href="collection-new">New</a>
-  <p>Total: {{ collections.length }}</p>
-  <ul>
-    {% for item in collections %}
-    <li>{{ item }}</li>
-    {%- endfor -%}
-  </ul>
-  
+  <a href="collection-new">New Collection</a>
+
+  <div class="container">    
+    <ul class="collection with-header" style="list-style-type:none">
+	<li class="collection-item" style="padding:10px;">
+	  <div class="row">
+	    <div class="col">Collections</div>
+	    <div class="col">Actions</div>
+	  </div>
+	</li>
+	{% for collection_id in collections %}
+	<li class="collection-item" style="padding:10px;">
+	  <div class="row">
+	    <div class="col">
+	      <a href="collection-one" style="display:inline-block">{{ collection_id }}</a>
+	    </div>
+	    <div class="col">
+	    
+	      <form name=index id=index action=index-faces method=post style="display:inline-block">
+		<input type=hidden id=collection_id name=collection_id value={{ collection_id }}>
+		<input type=submit value="Index Faces">
+	      </form>
+	      <form id=delete name=delete action=collection-delete method=post style="display:inline-block">
+		<input type=hidden id=collection_id name=collection_id value={{ collection_id }}>
+		<input type=submit value="Delete">
+	      </form>
+	    </div> 
+	</li>
+	{% endfor %}
+    </ul>
+    <div class="row">
+      <div class="col">
+	<p>Total: {{ total }}</p>
+      </div>
+    </div>
 </div>
 {% endblock content %}
     
