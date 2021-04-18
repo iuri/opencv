@@ -1,0 +1,61 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>{{ collection_id}}</h1>
+<h2>Collection Details</h2>
+<div>
+  {% if msg == "success" %}
+  <div id="alert" class="alert alert-success" role="alert" style="float:right; width:100%;padding-left:150px;">
+    <b>All faces were successfully indexed!</b>
+  </div>
+  {% endif %}
+  {% if msg == "failed" %}
+  <div id="alert" class="alert alert-danger" role="alert" style="float:right; width:100%;padding-left:150px;">
+    <b>Failed to delete face!</b>
+  </div>
+  {% endif %}
+  <a href="face-new">New Face</a>
+  
+  <div class="container">    
+    <ul class="face with-header" style="list-style-type:none">
+	<li class="face-item" style="padding:10px;">
+	  <div class="row">
+	    <div class="col">Faces</div>
+	    <div class="col">Actions</div>
+	  </div>
+	</li>
+	{% for face in faces %}
+	<li class="collection-item" style="padding:10px;">
+	  <div class="row">
+	    <div class="col">
+	      <a href="face-one" style="display:inline-block">
+		
+		<img src="#">
+		<span>{{face['FaceId']}}</span>
+	      </a>
+	    </div>
+	    <div class="col">
+	      <form name="details" id="details" action="face-one" enctype="application/json" method="post" style="display:inline-block">
+		
+		<input type="hidden" id="face" name="face" value={{ face['ExternalImageId'] }}>
+		<input type="submit" value="Details">
+	      </form>
+	      <form name="delete" id="delete" action="face-delete" method="post" style="display:inline-block">
+		
+		<input type="hidden" id="face_id" name="face_id" value={{ face['FaceId'] }}>
+		<input type="hidden" id="collection_id" name="collection_id" value={{ collection_id }}>
+		<input type="submit" value="Delete">
+	      </form>
+	      
+	    </div> 
+	</li>
+	{% endfor %}
+    </ul>
+    <div class="row">
+      <div class="col">
+	<p>Total: {{ total }}</p>
+      </div>
+    </div>
+</div>
+{% endblock content %}
+    
+    

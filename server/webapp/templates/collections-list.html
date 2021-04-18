@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 {% block content %}
-<h1>List AWS Colelctions</h1>
+<h1>List AWS Collections</h1>
 <div>
   {% if msg == "success" %}
   <div id="alert" class="alert alert-success" role="alert" style="float:right; width:100%;padding-left:150px;">
@@ -21,7 +21,7 @@
 	<li class="collection-item" style="padding:10px;">
 	  <div class="row">
 	    <div class="col">
-	      <a href="collection-one" style="display:inline-block">{{ collection_id }}</a>
+	      <a href="collection-one?collection_id={{collection_id}}" style="display:inline-block">{{ collection_id }}</a>
 	    </div>
 	    <div class="col">
 	    

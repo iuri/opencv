@@ -2,8 +2,13 @@
 {% block content %}
 <h1>List AWS Colelctions</h1>
 <div>
+  {% if msg == "success" %}
+  <div id="alert" class="alert alert-success" role="alert" style="float:right; width:100%;padding-left:150px;">
+    <b>All faces were successfully indexed!</b>
+  </div>
+  {% endif %}
   <a href="collection-new">New Collection</a>
-
+  
   <div class="container">    
     <ul class="collection with-header" style="list-style-type:none">
 	<li class="collection-item" style="padding:10px;">

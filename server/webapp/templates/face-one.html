@@ -1,0 +1,25 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>Face Details</h1>
+<div>
+  {% if msg == "success" %}
+  <div id="alert" class="alert alert-success" role="alert" style="float:right; width:100%;padding-left:150px;">
+    <b>All faces were successfully indexed!</b>    
+  </div>
+  {% endif %}
+  <a href="#" onclick="goBack()">Go Back</a>
+  <br>
+  <img src={{ filename }}>
+</div>
+
+
+<script>
+function goBack() {
+  window.history.back();
+}
+</script>
+
+{% endblock content %}
+    
+
+
