@@ -1,5 +1,5 @@
 
-import os, requests, time
+import os, requests, time, socket
 import config
 image_path = './images'
 while 1:
@@ -10,9 +10,11 @@ while 1:
             if os.path.isfile(file_path):
                 try:                    
                     headers = {
+                        'Content-Location': socket.gethostname,
                         'Timestamp': str(time.time()),
-                         'Authorization': config.auth_token
+                        'Authorization': config.auth_token                     
                     }
+                    
                     print("Sending file...")
                     with open(file_path,'rb') as fp:
                         file_dict = {'file': (f, fp, 'multipart/form-data')}

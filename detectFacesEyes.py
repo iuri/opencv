@@ -1,6 +1,6 @@
 import numpy as np
 import cv2
-import sys, random, string
+import sys, random, string, time
 import config
 faceCascade = cv2.CascadeClassifier('./haarcascade/haarcascade_frontalface_default.xml')
 # eyeCascade = cv2.CascadeClassifier('./haarcascade/haarcascade_eye.xml')
@@ -36,6 +36,7 @@ while True:
                 letters = string.ascii_lowercase
                 result_str = ''.join(random.choice(letters) for i in range(12))
                 status = cv2.imwrite("./images/"+result_str+".jpg", crop_img)
+                time.sleep(2)
     cv2.imshow("Window",img)
 
     #This breaks on 'q' key
