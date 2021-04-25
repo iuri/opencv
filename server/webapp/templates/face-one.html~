@@ -1,0 +1,15 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>Collection Details</h1>
+<div>
+  {% if msg == "success" %}
+  <div id="alert" class="alert alert-success" role="alert" style="float:right; width:100%;padding-left:150px;">
+    <b>All faces were successfully indexed!</b>    
+  </div>
+  {% endif %}
+  <h2>Face</h2>
+  <img src={{ filename }}>
+</div>
+{% endblock content %}
+    
+    
