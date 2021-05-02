@@ -81,11 +81,11 @@ def detect_faces(bucket, filename, collection_id="SamsungRekCollection", attribu
     },
     Attributes=attributes,
   )
-  print("FACE DETAILS", response)
+  #  print("FACE DETAILS", response)
 
 
   match = match_faces(filename, bucket)
-  print("MATCHING RESULTS ", match)
+  # print("MATCHING RESULTS ", match)
 
   if match != '':
       if match['Similarity'] > 99 and match['Face']['Confidence'] > 99:
@@ -107,8 +107,8 @@ def detect_faces(bucket, filename, collection_id="SamsungRekCollection", attribu
       MaxFaces=1,
       QualityFilter="AUTO",
       DetectionAttributes=['ALL'])
-  #result = {**index, **response}
-  #return json.dumps(result)
+  # result = {**index, **response}
+  # return json.dumps(result)
   return json.dumps(index)
                 
 
@@ -116,27 +116,27 @@ def detect_faces(bucket, filename, collection_id="SamsungRekCollection", attribu
 
 @main.route('/index-faces', methods=['POST'])
 def index_faces(bucket="qonteoimages", region="us-east-1"):
-    print("Running index_faces ...")
+    # print("Running index_faces ...")
     if request.method == 'POST':
         rek_client = boto3.client("rekognition", region)
         s3_client = boto3.client("s3", region)
         
         response = rek_client.list_collections(MaxResults=10)
 
-        print("CollectionID", request.form['collection_id'])
-        print("LIST ", response['CollectionIds'])
+        # print("CollectionID", request.form['collection_id'])
+        # print("LIST ", response['CollectionIds'])
 
         if request.form['collection_id'] in response['CollectionIds']:
 
             all_objects = s3_client.list_objects(Bucket=bucket)
-            print("ALL OBJECTS", all_objects)
+            # print("ALL OBJECTS", all_objects)
             for content in all_objects['Contents']:
-                print("CONTENT ", content)
+                # print("CONTENT ", content)
                 collection_name = content['Key']
                 collection_image = content['Key']
                 if collection_image:
                     label = collection_name
-                    print('indexing: ',label)
+                    # print('indexing: ',label)
                     image = content['Key']    
                     index_response=rek_client.index_faces(CollectionId=request.form['collection_id'],
                                                           Image={'S3Object':{'Bucket':bucket,'Name':image}},
@@ -145,7 +145,7 @@ def index_faces(bucket="qonteoimages", region="us-east-1"):
                                                           QualityFilter="AUTO",
                     DetectionAttributes=['ALL'])
                     
-                    print('FaceId: ',index_response['FaceRecords'][0]['Face']['FaceId'])
+                    # print('FaceId: ',index_response['FaceRecords'][0]['Face']['FaceId'])
                     
                     return redirect('http://aws.qonteo.com/collections-list?msg=success');
                 
@@ -154,7 +154,7 @@ def index_faces(bucket="qonteoimages", region="us-east-1"):
 
 
 def list_faces(collection_id, region="us-east-1", next_token="", max_results=123):
-    print("Running function list_faces ...")
+    # print("Running function list_faces ...")
     rek_client = boto3.client("rekognition", region)
     response = rek_client.list_faces(
         CollectionId=collection_id,
@@ -166,8 +166,8 @@ def list_faces(collection_id, region="us-east-1", next_token="", max_results=123
 
 @main.route("/face-one", methods=['POST'])
 def face_one():
-    print("Running face-one ...")
-    print("REQUEST ", request.args)
+    # print("Running face-one ...")
+    # print("REQUEST ", request.args)
     image_dir = url_for('static', filename=request.form['face']) 
     filename= image_dir
 
@@ -179,7 +179,7 @@ def face_one():
 
 
 def face_delete2(face_id, collection_id, region="us-east-1"):
-    print('Attempting to delete face ' + face_id)
+    # print('Attempting to delete face ' + face_id)
     client=boto3.client('rekognition', region)
     status_code=0
     try:
@@ -187,7 +187,7 @@ def face_delete2(face_id, collection_id, region="us-east-1"):
             CollectionId=collection_id,
             FaceIds=[face_id]
         )
-        print("Deleted Faces:", response['DeletedFaces']);
+        # print("Deleted Faces:", response['DeletedFaces']);
         status_code=1
     except ClientError as e:
         if e.response['Error']['Code'] == 'ResourceNotFoundException':
@@ -206,7 +206,7 @@ def face_delete():
             flash('FaceId must not be empty!')
         else:
             # Creare new colection
-            print("Deleting Face")
+            # print("Deleting Face")
             if face_delete2(request.form['face_id'], request.form['collection_id']):
                 return redirect('http://aws.qonteo.com/collection-one?msg=success&collection_id=SamsungRekCollection')
     return redirect('http://aws.qonteo.com/collection-one?msg=failed&collection_id=SamsungRekCollection')
@@ -228,7 +228,7 @@ def face_delete():
 
 
 def collection_delete2(collection_id, region="us-east-1"):
-    print('Attempting to delete collection ' + collection_id)
+    # print('Attempting to delete collection ' + collection_id)
     client=boto3.client('rekognition', region)
     status_code=0
     try:
@@ -372,7 +372,7 @@ def detect_labels(bucket, filename, attributes=['ALL'], region="us-east-1"):
   x = response['Labels']
   for i in range(len(x)):
     y = x[i]
-    print(y['Name'])
+    # print(y['Name'])
     if (y['Name'] == 'Face'):
         return detect_faces(bucket, filename)
   #return response['Labels']
@@ -412,15 +412,16 @@ def upload_face(json_text):
     headers = {
         'Content-Type': 'application/x-www-form-urlencoded',
         'Authorization': request.headers['Authorization'],
-        'Timestamp': request.headers['Timestamp']
+        'Timestamp': request.headers['Timestamp'],
+        'Content-Location': request.headers['Content-Location']
     }
 
-    print("Sending JSON ...")
+    # print("Sending JSON ...")
     if request.headers['Authorization']:
         payload = {'data': json.dumps({'data': json_text})}
         response = requests.post("https://dashboard.qonteo.com/REST/import-face-aws", data=payload, headers=headers)
-        print(response.status_code)
-        print("RESPNOSE FROM ZILL ", response.text)
+        # print(response.status_code)
+        # print("RESPNOSE FROM ZILL ", response.text)
     
         if response.status_code == 200:
             if response.text == 'ok':
