@@ -10,7 +10,8 @@ while 1:
             if os.path.isfile(file_path):
                 try:                    
                     headers = {
-                        'Content-Location': socket.gethostname,
+                        #'Content-Location': socket.gethostname(),
+                        'Content-Location': 'SMSNG002',
                         'Timestamp': str(time.time()),
                         'Authorization': config.auth_token                     
                     }
