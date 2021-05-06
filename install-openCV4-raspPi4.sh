@@ -132,3 +132,8 @@ sudo /etc/init.d/dphys-swapfile stop
 sudo /etc/init.d/dphys-swapfile start
 
 echo "sudo modprobe bcm2835-v4l2" &amp;amp;amp;amp;gt;&amp;amp;amp;amp;gt; ~/.profile
+
+# Create shortcut
+cd ~/Applications/qonteo
+sudo cp qonteo.desktop /usr/share/applications/
+sudo cp qonteo.desktop ~/Desktop/

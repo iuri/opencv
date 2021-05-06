@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 import sys, random, string, time
+import os, os.path
 import config
 faceCascade = cv2.CascadeClassifier('./haarcascade/haarcascade_frontalface_default.xml')
 # eyeCascade = cv2.CascadeClassifier('./haarcascade/haarcascade_eye.xml')
@@ -11,6 +12,14 @@ video_capture = cv2.VideoCapture(0)
 
 cv2.namedWindow("Window", cv2.WINDOW_NORMAL)
 cv2.resizeWindow('Window', 400, 400)
+
+path = "images"
+os.chdir(".")
+
+if not os.path.isdir(path):
+    #now = datetime.datetime.now().strftime("%y%m%d%H%M")
+    os.umask(0)
+    os.makedirs(path, mode=0o777, exist_ok=False)
 
 while True:
     ret, img = video_capture.read()
@@ -36,6 +45,7 @@ while True:
                 letters = string.ascii_lowercase
                 result_str = ''.join(random.choice(letters) for i in range(12))
                 status = cv2.imwrite("./images/"+result_str+".jpg", crop_img)
+                os.chmod("./images/"+result_str+".jpg", 0o777)
                 time.sleep(2)
     cv2.imshow("Window",img)
 

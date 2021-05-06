@@ -1,0 +1,10 @@
+[Desktop Entry]
+encoding=UTF-8
+Name=yQonteo
+Comment[en_US]=yClick here to launch Qonteo App
+Icon=/home/pi/Applications/qonteo/qonteoicon.png
+Path=/home/pi/Applications/qonteo
+Exec=bash /home/pi/Applications/qonteo/launch.sh
+StartupNotify=true
+Terminal=true
+Type=Application
