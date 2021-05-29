@@ -7,11 +7,11 @@ faceCascade = cv2.CascadeClassifier('./haarcascade/haarcascade_frontalface_defau
 # eyeCascade = cv2.CascadeClassifier('./haarcascade/haarcascade_eye.xml')
 eyeCascade = cv2.CascadeClassifier('./haarcascade/haarcascade_eye_tree_eyeglasses.xml')
 
-video_capture = cv2.VideoCapture(0)
-#video_capture = cv2.VideoCapture(config.camera_url)
+#video_capture = cv2.VideoCapture(0)
+video_capture = cv2.VideoCapture(config.camera_url)
 
-cv2.namedWindow("Window", cv2.WINDOW_NORMAL)
-cv2.resizeWindow('Window', 400, 400)
+#cv2.namedWindow("Window", cv2.WINDOW_NORMAL)
+#cv2.resizeWindow('Window', 400, 400)
 
 path = "images"
 os.chdir(".")
@@ -47,7 +47,7 @@ while True:
                 status = cv2.imwrite("./images/"+result_str+".jpg", crop_img)
                 os.chmod("./images/"+result_str+".jpg", 0o777)
                 time.sleep(2)
-    cv2.imshow("Window",img)
+    #cv2.imshow("Window",img)
 
     #This breaks on 'q' key
     if cv2.waitKey(1) & 0xFF == ord('q'):

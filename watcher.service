@@ -1,0 +1,17 @@
+[Unit]
+Description=The monitor for uptime server
+After=syslog.target network-online.target remote-fs.target nss-lookup.target multi-user.service
+Wants=network-online.target
+Conflicts=getty@tty1.service
+
+[Service]
+Type=simple
+WorkingDirectory=/home/qonteo/opencv
+ExecStart=/usr/bin/python3 /home/qonteo/opencv/watcher.py
+StandardInput=tty-force
+
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

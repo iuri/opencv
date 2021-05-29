@@ -1,8 +1,8 @@
 #!/bin/bash
 # Activate OpenCV virtual enviuronment
-source /home/pi/Applications/OpenCV-master-py3/bin/activate
+source /home/qonteo/opencv/OpenCV-master-py3/bin/activate
 # Got to Qonteo app home directory
-cd /home/pi/Applications/qonteo
+cd /home/qonteo/opencv
 # Launch Watcher
 python3 watcher.py &
 # Launch Detect Faces
