@@ -4,6 +4,7 @@ import os, requests, json
 from werkzeug.utils import secure_filename
 
 import time
+import logging
 
 
 # Boto3 libraries to support AWS Rekognition
@@ -45,28 +46,32 @@ FEATURES_BLACKLIST = ("Landmarks", "Emotions", "Pose", "Quality", "BoundingBox",
 
 
 def match_faces(filename, bucket="qonteoimages", collectionId="SamsungRekCollection", region="us-east-1"):
-    rek_client = boto3.client("rekognition", region)
-    # print("FILENAME", filename)
-    # match_response = rek_client.search_faces_by_image(CollectionId=collectionId,Image={'Bytes': image.read()}, MaxFaces=1,FaceMatchThreshold=85)
-    match_response = rek_client.search_faces_by_image(
-        CollectionId=collectionId,
-        Image={"S3Object": {
-            "Bucket": bucket,
-            "Name": filename
+    try:
+        rek_client = boto3.client("rekognition", region)
+        # print("FILENAME", filename)
+        # match_response = rek_client.search_faces_by_image(CollectionId=collectionId,Image={'Bytes': image.read()}, MaxFaces=1,FaceMatchThreshold=85)
+        match_response = rek_client.search_faces_by_image(
+            CollectionId=collectionId,
+            Image={"S3Object": {
+                "Bucket": bucket,
+                "Name": filename
             }               
         },
         MaxFaces=1,
         FaceMatchThreshold=90)
-    
-    if match_response['FaceMatches']:
-        print('Hello, ',match_response['FaceMatches'][0]['Face']['ExternalImageId'])
-        print('Similarity: ',match_response['FaceMatches'][0]['Similarity'])
-        print('Confidence: ',match_response['FaceMatches'][0]['Face']['Confidence'])
-        return match_response['FaceMatches'][0]
-    else:
-        print('No faces matched')
-        return ''
         
+        if match_response['FaceMatches']:
+            print('Hello, ',match_response['FaceMatches'][0]['Face']['ExternalImageId'])
+            print('Similarity: ',match_response['FaceMatches'][0]['Similarity'])
+            print('Confidence: ',match_response['FaceMatches'][0]['Face']['Confidence'])
+            return match_response['FaceMatches'][0]
+        else:
+            print('No faces matched')
+            return ''
+    except Exception as e:
+        logging.error('Caught Exception: ' + str(e))
+        #raise Exception('Caught Exception: '.format(e)) from None
+       # time.sleep(3)
         
     
 def detect_faces(bucket, filename, collection_id="SamsungRekCollection", attributes=['ALL'], region="us-east-1"):
@@ -81,36 +86,41 @@ def detect_faces(bucket, filename, collection_id="SamsungRekCollection", attribu
     },
     Attributes=attributes,
   )
-  #  print("FACE DETAILS", response)
+  print('FILE ', filename)
+  print("FACE DETAILS ", response)
+  
+  if response['FaceDetails'] != []:
+      match = match_faces(filename, bucket)
+      print("MATCHING RESULTS ", match)
 
 
-  match = match_faces(filename, bucket)
-  # print("MATCHING RESULTS ", match)
+      if match != '' and match != 'None':
+          if match['Similarity'] > 99 and match['Face']['Confidence'] > 99:
+              # Face already exists. Append its details with match
+              print("Face Exists")
+              result = {**match, **response}
+              return json.dumps({"FaceRecords": [result]})
+          else:
+              print("False Match! Person may not be the same")
+              print("No matches")
+              # No matches resulted. Then it indexes new Face
+              index = rek_client.index_faces(
+                  CollectionId=collection_id,
+                  Image={'S3Object':{
+                      'Bucket':bucket,
+                      'Name':filename}
+                  },
+                  ExternalImageId=filename,
+                  MaxFaces=1,
+                  QualityFilter="AUTO",
+                  DetectionAttributes=['ALL'])
+              # result = {**index, **response}
+              # return json.dumps(result)
+              return json.dumps(index)
 
-  if match != '':
-      if match['Similarity'] > 99 and match['Face']['Confidence'] > 99:
-          # Face already exists. Append its details with match
-          print("Face Exists")
-          result = {**match, **response}
-          return json.dumps({"FaceRecords": [result]})
-      else:
-          print("False Match! Person may not be the same")
-  print("No matches")
-  # No matches resulted. Then it indexes new Face
-  index = rek_client.index_faces(
-      CollectionId=collection_id,
-      Image={'S3Object':{
-          'Bucket':bucket,
-          'Name':filename}
-    },
-      ExternalImageId=filename,
-      MaxFaces=1,
-      QualityFilter="AUTO",
-      DetectionAttributes=['ALL'])
-  # result = {**index, **response}
-  # return json.dumps(result)
-  return json.dumps(index)
-                
+
+      
+  return 'noface'
 
 
 
@@ -160,8 +170,6 @@ def list_faces(collection_id, region="us-east-1", next_token="", max_results=123
         CollectionId=collection_id,
         MaxResults=max_results)
     return response['Faces']
-
-
 
 
 @main.route("/face-one", methods=['POST'])
@@ -372,11 +380,11 @@ def detect_labels(bucket, filename, attributes=['ALL'], region="us-east-1"):
   x = response['Labels']
   for i in range(len(x)):
     y = x[i]
-    # print(y['Name'])
+    print(y['Name'])
     if (y['Name'] == 'Face'):
         return detect_faces(bucket, filename)
   #return response['Labels']
-  return ''
+  return 'noface'
 
 
 
@@ -409,15 +417,15 @@ def detect_labels(bucket, filename, attributes=['ALL'], region="us-east-1"):
 def upload_face(json_text):
     #  print("HEADERS ", request.headers)
     #  print("HEADERS AUTH ", request.headers['Authorization'] )
-    headers = {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': request.headers['Authorization'],
-        'Timestamp': request.headers['Timestamp'],
-        'Content-Location': request.headers['Content-Location']
-    }
-
     # print("Sending JSON ...")
     if request.headers['Authorization']:
+        headers = {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Authorization': request.headers['Authorization'],
+            'Timestamp': request.headers['Timestamp'],
+            'Content-Location': request.headers['Content-Location']
+        }
+
         payload = {'data': json.dumps({'data': json_text})}
         response = requests.post("https://dashboard.qonteo.com/REST/import-face-aws", data=payload, headers=headers)
         # print(response.status_code)
@@ -453,6 +461,8 @@ def upload_file():
             if json_text != '':
                 if upload_face(json_text):
                     return "ok"
+            if json_text == 'noface':
+                return "ok"            
             return "nok"
     return '''
     <!doctype html>
