@@ -109,13 +109,13 @@ cd build
 cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local -D INSTALL_PYTHON_EXAMPLES=OFF -D ENABLE_NEON=ON -D ENABLE_VFPV3=ON -D OPENCV_EXTRA_MODULES_PATH=/home/qonteo/opencv/opencv_contrib/modules -D BUILD_TESTS=OFF -D OPENCV_ENABLE_NONFREE=ON -D CMAKE_SHARED_LINKER_FLAGS=-latomic -D INSTALL_PYTHON_EXAMPLES=ON -D WITH_OPENMP=ON -D WITH_TBB=ON -D BUILD_TBB=ON -D WITH_V4L=ON -D WITH_QT=ON -D BUILD_EXAMPLES=OFF ..
 
 make -j$(nproc)
-make install
+sudo make install
 
 sudo sed -i 's/CONF_SWAPSIZE=1024/CONF_SWAPSIZE=100/g' /etc/dphys-swapfile
 sudo /etc/init.d/dphys-swapfile stop
 sudo /etc/init.d/dphys-swapfile start
 
-echo "sudo modprobe bcm2835-v4l2" &amp;amp;amp;amp;gt;&amp;amp;amp;amp;gt; ~/.profile
+echo "sudo modprobe bcm2835-v4l2" >> ~/.bashrc
 
 # Create shortcut
 cd ~/Applications/qonteo

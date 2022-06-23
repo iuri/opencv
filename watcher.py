@@ -14,6 +14,7 @@ while 1:
         file_path = image_path + '/' + f
         if os.path.splitext(file_path)[1].lower() in ('.jpg', '.jpeg', '.png'):
             if os.path.isfile(file_path):
+                # print("HOST", socket.gethostname())
                 try:                    
                     headers = {
                         'Content-Location': socket.gethostname(),
@@ -21,15 +22,18 @@ while 1:
                         'Authorization': config.auth_token                     
                     }
                 
-                    print("Sending file...", file_path)
+                    # print("Sending file...", file_path)
+                    # print("Destination", config.url)
                     with open(file_path,'rb') as fp:
-                        file_dict = {'file': (f, fp, 'multipart/form-data')}
+                        file_dict = {'upload_file': (f, fp, 'multipart/form-data')}
                         response = requests.post(config.url, files=file_dict, headers=headers)
                         fp.close()
+                        # print("STATU", response.status_code)
                         if response.status_code == 200 and response.text == 'ok':
                             os.remove(file_path)     
                             del headers
                             del response
                             del file_path
+                            time.sleep(2)
                 except:
                     time.sleep(10)
