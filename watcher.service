@@ -6,11 +6,14 @@ Conflicts=getty@tty1.service
 
 [Service]
 Type=simple
-User=pi
-Group=pi
+# User=pi
+# Group=pi
 WorkingDirectory=/home/pi/opencv
 ExecStart=/usr/bin/python3 /home/pi/opencv/watcher.py
 StandardInput=tty-force
+
+StandardOutput=append:/var/log/watcher.log
+StandardError=append:/var/log/watcher_error.log
 
 Restart=always
 RestartSec=10

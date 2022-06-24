@@ -1,6 +1,10 @@
 
 import os, requests, time, socket
+import logging
 import config
+
+logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', filename='/var/log/watcher.log',level=logging.INFO)
+
 image_path = './images'
 os.chdir(".")
 
@@ -22,13 +26,13 @@ while 1:
                         'Authorization': config.auth_token                     
                     }
                 
-                    # print("Sending file...", file_path)
+                    logging.info('Sending file... %s' % file_path)
                     # print("Destination", config.url)
                     with open(file_path,'rb') as fp:
                         file_dict = {'upload_file': (f, fp, 'multipart/form-data')}
                         response = requests.post(config.url, files=file_dict, headers=headers)
                         fp.close()
-                        # print("STATU", response.status_code)
+                        logging.info('STATUS %s' % response.status_code)
                         if response.status_code == 200 and response.text == 'ok':
                             os.remove(file_path)     
                             del headers
