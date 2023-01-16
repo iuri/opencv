@@ -5,7 +5,8 @@ import os, os.path
 import logging
 import config
 
-logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', filename='/var/log/detectfaces.log',level=logging.INFO)
+# Uncomonent before deploy it
+# logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', filename='/var/log/detectfaces.log',level=logging.INFO)
 
 faceCascade = cv2.CascadeClassifier('./haarcascade/haarcascade_frontalface_default.xml')
 # eyeCascade = cv2.CascadeClassifier('./haarcascade/haarcascade_eye.xml')
@@ -14,8 +15,8 @@ eyeCascade = cv2.CascadeClassifier('./haarcascade/haarcascade_eye_tree_eyeglasse
 # video_capture = cv2.VideoCapture(0)
 video_capture = cv2.VideoCapture(config.camera_url)
 
-# cv2.namedWindow("Window", cv2.WINDOW_NORMAL)
-# cv2.resizeWindow('Window', 400, 400)
+cv2.namedWindow("Window", cv2.WINDOW_NORMAL)
+cv2.resizeWindow('Window', 400, 400)
 
 path = "images"
 os.chdir(".")
@@ -25,43 +26,39 @@ if not os.path.isdir(path):
     os.umask(0)
     os.makedirs(path, mode=0o777, exist_ok=False)
 
-#print("Connecting to camera ", config.camera_url) 
+print("Connecting to camera ", config.camera_url) 
 logging.info('Connecting to camera: %s' % config.camera_url) 
 while True:
     ret, img = video_capture.read()
-
     if np.shape(img) != ():
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    
         faces = faceCascade.detectMultiScale(gray, scaleFactor=1.3, minNeighbors=3, minSize=(30, 30))
-
         for (x, y, w, h) in faces:
-            cv2.rectangle(img, (x, y), (x+w, y+h), (255,0, 0), 2)
+            print("Potential Face!")
+            # cv2.rectangle(img, (x, y), (x+w, y+h), (255,0, 0), 2)
             roi_gray = gray[y:y+h, x:x+w]
             roi_color = img[y:y+h, x:x+w]
-        
             eyes = eyeCascade.detectMultiScale(roi_gray)
-            # eyes = eyeCascade.detectMultiScale(roi_color)
+            eyes = eyeCascade.detectMultiScale(roi_color)
         
-            #for (ex, ey, ew, eh) in eyes:
-            #cv2.rectangle(roi_color,(ex,ey),(ex+ew,ey+eh),(0,255,0), 2)
-        
-            if len(eyes) != 0:
-                #print("EYES", eyes)
+            for (ex, ey, ew, eh) in eyes:
+                # cv2.rectangle(roi_color,(ex,ey),(ex+ew,ey+eh),(0,255,0), 2)        
+                if len(eyes) != 0:
+                    print("EYES", eyes)
                 crop_img = img[y-99:y+h+99, x-36:x+w+36]
                 if len(crop_img) != 0:
                     letters = string.ascii_lowercase
                     result_str = ''.join(random.choice(letters) for i in range(12))
-                    status = cv2.imwrite("./images/"+result_str+".jpg", crop_img)
-                    os.chmod("./images/"+result_str+".jpg", 0o777)
+                    status = cv2.imwrite("./images/"+result_str+".png", crop_img)
+                    os.chmod("./images/"+result_str+".png", 0o777)
                     logging.info('Face detected')
                     # logging.info("Found {0} Faces!".format(len(faces)))
 
-    #cv2.imshow("Window",img)
+    cv2.imshow("Window",img)
                 
     # This breaks on 'q' key
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
     # time.sleep(2)
 video_capture.release()
-# cv2.destroyAllWindows()
+cv2.destroyAllWindows()
