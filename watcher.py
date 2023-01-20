@@ -34,9 +34,8 @@ while 1:
                         fp.close()
                         # logging.info('STATUS %s' % response.status_code)
                         print('STATUS %s' % response.status_code)
-                        print('RESULT %s' % response.text)
-                        
-                        if response.status_code == 200 and response.text == 'ok':
+                        # print('RESULT %s' % response.text)
+                        if response.status_code == 200 and response.json()['faces'] != []:
                             print('Removing file... %s' % file_path)
                             os.remove(file_path)     
                             del headers

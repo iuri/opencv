@@ -35,22 +35,22 @@ while True:
         faces = faceCascade.detectMultiScale(gray, scaleFactor=1.3, minNeighbors=3, minSize=(30, 30))
         for (x, y, w, h) in faces:
             print("Potential Face!")
-            # cv2.rectangle(img, (x, y), (x+w, y+h), (255,0, 0), 2)
+            cv2.rectangle(img, (x, y), (x+w, y+h), (255,0, 0), 2)
             roi_gray = gray[y:y+h, x:x+w]
             roi_color = img[y:y+h, x:x+w]
             eyes = eyeCascade.detectMultiScale(roi_gray)
             eyes = eyeCascade.detectMultiScale(roi_color)
         
             for (ex, ey, ew, eh) in eyes:
-                # cv2.rectangle(roi_color,(ex,ey),(ex+ew,ey+eh),(0,255,0), 2)        
+                cv2.rectangle(roi_color,(ex,ey),(ex+ew,ey+eh),(0,255,0), 2)        
                 if len(eyes) != 0:
                     print("EYES", eyes)
                 crop_img = img[y-99:y+h+99, x-36:x+w+36]
                 if len(crop_img) != 0:
                     letters = string.ascii_lowercase
                     result_str = ''.join(random.choice(letters) for i in range(12))
-                    status = cv2.imwrite("./images/"+result_str+".png", crop_img)
-                    os.chmod("./images/"+result_str+".png", 0o777)
+                    status = cv2.imwrite("./images/"+result_str+".jpg", crop_img)
+                    os.chmod("./images/"+result_str+".jpg", 0o777)
                     logging.info('Face detected')
                     # logging.info("Found {0} Faces!".format(len(faces)))
 
